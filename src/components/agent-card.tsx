@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Target, Brain, AlertCircle, CheckCircle2, XCircle, Wallet } from "lucide-react";
+import { User, Target, Brain, AlertCircle, CheckCircle2, XCircle, Wallet, PlusCircle, MinusCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AgentProps {
@@ -9,12 +9,12 @@ interface AgentProps {
     role: string;
     personality: string;
     goal: string;
-    problem: string;
+    positivesFound?: string[];
+    negativesFound?: string[];
     score: number;
     wouldUse: boolean;
     wouldPay: boolean;
     priceWilling: string;
-    timeToAdopt: string;
     reason: string;
     feedback: string;
   };
@@ -57,30 +57,52 @@ export function AgentCard({ agent }: AgentProps) {
           </Badge>
         </div>
 
+        {/* Signals Section */}
+        <div className="grid grid-cols-2 gap-2">
+          {agent.positivesFound && agent.positivesFound.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-green-400 font-bold uppercase flex items-center gap-1">
+                <PlusCircle className="w-2.5 h-2.5" /> Boosts
+              </p>
+              <ul className="text-[10px] text-foreground/70 space-y-0.5">
+                {agent.positivesFound.slice(0, 3).map((s, i) => (
+                  <li key={i} className="truncate">• {s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {agent.negativesFound && agent.negativesFound.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-red-400 font-bold uppercase flex items-center gap-1">
+                <MinusCircle className="w-2.5 h-2.5" /> Penalties
+              </p>
+              <ul className="text-[10px] text-foreground/70 space-y-0.5">
+                {agent.negativesFound.slice(0, 3).map((s, i) => (
+                  <li key={i} className="truncate">• {s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 gap-3 text-sm">
           <div className="space-y-1">
             <p className="text-muted-foreground flex items-center gap-1 text-xs uppercase tracking-wider font-semibold">
               <Brain className="w-3 h-3" /> Personality
             </p>
-            <p className="italic text-foreground/80">{agent.personality}</p>
+            <p className="italic text-foreground/80 text-xs">{agent.personality}</p>
           </div>
           <div className="space-y-1">
             <p className="text-muted-foreground flex items-center gap-1 text-xs uppercase tracking-wider font-semibold">
-              <Target className="w-3 h-3" /> Goal
+              <AlertCircle className="w-3 h-3" /> Logic
             </p>
-            <p className="text-foreground/80">{agent.goal}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-muted-foreground flex items-center gap-1 text-xs uppercase tracking-wider font-semibold">
-              <AlertCircle className="w-3 h-3" /> Decision Reason
-            </p>
-            <p className="text-foreground/80">{agent.reason}</p>
+            <p className="text-foreground/80 text-xs leading-relaxed">{agent.reason}</p>
           </div>
         </div>
 
         <div className="pt-4 border-t border-white/5">
-          <p className="text-xs uppercase tracking-wider font-semibold text-primary mb-2">Detailed Feedback</p>
-          <p className="text-sm text-foreground/70 leading-relaxed italic">"{agent.feedback}"</p>
+          <p className="text-xs uppercase tracking-wider font-semibold text-primary mb-1">Feedback</p>
+          <p className="text-xs text-foreground/70 leading-relaxed italic">"{agent.feedback}"</p>
         </div>
       </CardContent>
     </Card>

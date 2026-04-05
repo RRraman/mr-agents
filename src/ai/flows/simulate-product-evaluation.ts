@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Main simulation flow supporting 3 distinct modes with strictly dynamic scoring.
+ * @fileOverview Main simulation flow supporting 3 distinct modes with signal-based dynamic scoring.
  */
 
 import { ai } from '@/ai/genkit';
@@ -31,51 +31,69 @@ const simulateProductEvaluationFlow = ai.defineFlow(
     if (input.mode === 'market_analysis') {
       const systemPrompt = `You are MR.Agents simulation engine. 
       
-      CRITICAL RULE: Every aggregate metric MUST be calculated directly from the individual decisions of the 10 agents you generate. Do NOT use hardcoded or fixed scores.
+      CRITICAL RULE: Every aggregate metric MUST be calculated directly from the individual decisions of 10 agents. Do NOT use hardcoded or fixed scores.
       
       STEP 1: Generate 10 diverse and realistic personas.
-      Each persona MUST independently evaluate the product based on:
-      - Problem clarity and urgency.
-      - Uniqueness vs. existing solutions.
-      - Willingness to pay vs. their specific persona budget.
       
-      STEP 2: For each agent, set:
-      - score: (0-100) individual rating.
-      - wouldUse: boolean.
-      - wouldPay: boolean.
+      STEP 2: AGENT EVALUATION LOGIC (Apply per agent):
+      Start neutral:
+      - adoption_probability = 50%
+      - pay_probability = 20%
+
+      Evaluate these SIGNALS for the product idea:
       
-      STEP 3: COMPUTE AGGREGATE METRICS (Calculated from Step 2):
-      - wouldUsePercent = (Number of agents where wouldUse is true / 10) * 100
-      - wouldPayPercent = (Number of agents where wouldPay is true / 10) * 100
-      - avgAgentScore = (Sum of all 10 individual 'score' fields) / 10
-      - overallScore = (wouldUsePercent * 0.4) + (wouldPayPercent * 0.35) + (avgAgentScore * 0.25)
+      POSITIVE BOOSTS:
+      - Clear ROI (makes/saves money): +15 adoption, +20 pay
+      - Niche audience (specific target): +10 adoption, +10 pay
+      - Urgent pain (needs immediate solution): +15 adoption, +15 pay
+      - Revenue-linked value: +10 adoption, +20 pay
+      - B2B product: +5 adoption, +10 pay
+      - Strong differentiation: +10 adoption, +10 pay
+      - Workflow integration: +5 adoption, +5 pay
+
+      NEGATIVE PENALTIES:
+      - Crowded market: -15 adoption, -10 pay
+      - Vague target users: -10 adoption, -10 pay
+      - No pricing logic/justification: -5 adoption, -20 pay
+      - No urgency (nice-to-have): -15 adoption, -15 pay
+      - High switching cost: -10 adoption, -5 pay
+      - Free alternatives available: -15 adoption, -15 pay
+      - Requires behavior change: -10 adoption, -5 pay
+
+      STEP 3: AGENT DECISION:
+      - wouldUse = (final adoption_probability > 50)
+      - wouldPay = (final pay_probability > 40)
+      - confidenceScore = (A 0-100 rating based on how strongly the signals align)
+
+      STEP 4: COMPUTE AGGREGATE METRICS:
+      - adoptionRate = (Number of agents where wouldUse is true / 10) * 100
+      - payingRate = (Number of agents where wouldPay is true / 10) * 100
+      - avgAgentConfidence = (Sum of all 10 confidenceScores) / 10
+      - overallScore = (adoptionRate * 0.4) + (payingRate * 0.35) + (avgAgentConfidence * 0.25)
       
-      Expected Score Ranges (for your guidance, but let the math decide):
-      - Strong ideas: overallScore 65–85
-      - Average ideas: overallScore 40–65
-      - Weak ideas: overallScore 20–40
-      - Bad ideas: overallScore 0–20
+      Clamp final overallScore between 0 and 100.
       
       Return ONLY valid JSON:
       {
-        "overallScore": number (0-100, clamped),
-        "wouldUsePercent": number (0-100),
-        "wouldPayPercent": number (0-100),
-        "topAudience": "string (concise description of most likely segment)",
-        "summary": "string (executive analysis of the market potential)",
+        "overallScore": number,
+        "wouldUsePercent": number (this is adoptionRate),
+        "wouldPayPercent": number (this is payingRate),
+        "topAudience": "string",
+        "summary": "Executive analysis based on found signals",
         "agents": [
           {
             "name": "string",
             "role": "string",
             "personality": "string",
             "goal": "string",
-            "problem": "string",
-            "score": number (0-100),
+            "positivesFound": ["list of detected positive signals"],
+            "negativesFound": ["list of detected negative signals"],
+            "score": number (this is confidenceScore),
             "wouldUse": boolean,
             "wouldPay": boolean,
-            "priceWilling": "string (e.g. $10/mo)",
-            "reason": "string (detailed personal reason for their decision)",
-            "feedback": "string (direct advice to the founder)"
+            "priceWilling": "string",
+            "reason": "Detailed reasoning explaining the probability shift from signals",
+            "feedback": "Direct advice"
           }
         ]
       }`;
