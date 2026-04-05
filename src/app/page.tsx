@@ -25,7 +25,6 @@ export default function HomePage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
 
-  // Ensure user is signed in anonymously to save results
   useEffect(() => {
     if (!isUserLoading && !user && auth) {
       initiateAnonymousSignIn(auth);
@@ -57,15 +56,14 @@ export default function HomePage() {
     try {
       const response = await runSimulation({ productIdea, evaluationType });
       if (response.success && response.data) {
+        console.log("Simulation result:", response.data);
         setResults(response.data);
         
-        // Save results to Firestore on the client
         const simId = doc(collection(firestore, 'temp')).id;
         const simRef = doc(firestore, 'users', user.uid, 'simulations', simId);
         
         const agentResultIds = response.data.agents.map(() => doc(collection(firestore, 'temp')).id);
 
-        // Prepare the simulation document
         const simulationData = {
           id: simId,
           input: productIdea,
@@ -79,10 +77,8 @@ export default function HomePage() {
           agentResultIds: agentResultIds
         };
 
-        // Save simulation metadata
         setDocumentNonBlocking(simRef, simulationData, { merge: true });
 
-        // Save individual agent results
         response.data.agents.forEach((agent, index) => {
           const agentId = agentResultIds[index];
           const agentRef = doc(firestore, 'users', user.uid, 'simulations', simId, 'agentResults', agentId);
@@ -95,7 +91,7 @@ export default function HomePage() {
 
         toast({
           title: "Simulation Complete",
-          description: "10 AI agents have evaluated your product idea.",
+          description: "10 AI agents have realistically evaluated your product.",
         });
       } else {
         throw new Error(response.error);
@@ -117,13 +113,13 @@ export default function HomePage() {
       <header className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-4">
           <Rocket className="w-4 h-4" />
-          Beta: AI-Driven Market Testing
+          MR.Agents: Brutally Honest Market Testing
         </div>
         <h1 className="text-5xl md:text-6xl font-headline font-bold text-white tracking-tight">
           AI Market <span className="text-accent">Simulator</span>
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-body">
-          Paste your product concept and let 10 diverse AI personas evaluate its potential, adoption rate, and willingness to pay.
+          Validate your idea against 10 AI personas. This engine is designed to find flaws, not just flatter you.
         </p>
       </header>
 
@@ -165,7 +161,7 @@ export default function HomePage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Simulating Market...
+                  Running Critical Simulation...
                 </>
               ) : (
                 'Run Simulation'
@@ -174,12 +170,12 @@ export default function HomePage() {
           </div>
           
           <div className="p-4 rounded-xl bg-accent/5 border border-accent/10">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-accent mb-2">Agent Rules</h4>
+            <h4 className="text-xs font-bold uppercase tracking-wider text-accent mb-2">Realism Engine Active</h4>
             <ul className="text-xs text-muted-foreground space-y-2 list-disc pl-4">
-              <li>10 realistic personas generated per niche</li>
-              <li>Fixed budget of ₹1000 per agent</li>
-              <li>Calculated decision to use, pay, or ignore</li>
-              <li>Diverse personalities (skeptics to enthusiasts)</li>
+              <li>2 Buyers | 4 Interested | 4 Rejectors</li>
+              <li>Calculated disagreement between agents</li>
+              <li>Strict pricing and niche validation</li>
+              <li>Fixed ₹1000 budget logic</li>
             </ul>
           </div>
         </aside>
@@ -193,14 +189,14 @@ export default function HomePage() {
                 <div className="text-center space-y-4">
                   <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
                   <div className="space-y-2">
-                    <p className="text-xl font-headline font-medium text-white">Simulating Market Response...</p>
-                    <p className="text-sm">Agents are evaluating your product...</p>
+                    <p className="text-xl font-headline font-medium text-white">Generating 10 Real-world Personas...</p>
+                    <p className="text-sm">Bracing for feedback...</p>
                   </div>
                 </div>
               ) : (
                 <>
                   <LayoutDashboard className="w-16 h-16 opacity-20" />
-                  <p className="text-lg font-medium">Results will appear here once the simulation starts</p>
+                  <p className="text-lg font-medium text-center px-6">Results will appear here. Warning: 80% of agents may reject your idea if the value prop is weak.</p>
                 </>
               )}
             </div>
@@ -209,7 +205,7 @@ export default function HomePage() {
       </div>
 
       <footer className="pt-12 border-t border-white/5 text-center text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} AI Market Simulator. Built for data-driven product validation.</p>
+        <p>© {new Date().getFullYear()} MR.Agents Simulator. Validating markets with brutal honesty.</p>
       </footer>
     </div>
   );

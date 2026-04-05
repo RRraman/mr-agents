@@ -1,7 +1,7 @@
 'use server';
 /**
  * @fileOverview This file defines the Genkit flow for simulating product evaluations using Groq AI.
- * It uses a single-shot prompt to generate the entire market simulation for better reliability.
+ * It uses a single-shot prompt with strict realism constraints for better market validation.
  */
 
 import { ai } from '@/ai/genkit';
@@ -54,17 +54,33 @@ const simulateProductEvaluationFlow = ai.defineFlow(
     outputSchema: SimulateProductEvaluationOutputSchema,
   },
   async (input) => {
-    const prompt = `Act as an expert market research engine. Conduct a simulation for the following product idea:
+    const prompt = `Act as an expert market research engine. Conduct a CRITICAL and REALISTIC simulation for the following product idea:
     
     PRODUCT IDEA: "${input.productIdea}"
     EVALUATION FOCUS: "${input.evaluationType}"
     
-    Your task is to:
-    1. Generate 10 diverse AI personas (agents) representing distinct market segments.
-    2. Each agent must evaluate the product based on their unique personality, role, goals, and problems.
-    3. Each agent has a mental budget of ₹1000.
-    4. Provide an overall market analysis based on all evaluations.
+    Your task is to generate 10 diverse AI personas (agents) and have them evaluate the product with BRUTAL HONESTY. This is market validation, NOT promotion.
+
+    REALISM CONSTRAINTS (Mandatory):
+    1. AGENT DISTRIBUTION (Strictly follow this for the 10 agents):
+       - 2 Agents: Enthusiastic early adopters / Strong buyers.
+       - 2 Agents: Interested in the concept but REFUSE to pay (looking for free alternatives).
+       - 2 Agents: Would only use a free version; price sensitivity is very high.
+       - 2 Agents: Complete indifference / Will ignore the product.
+       - 2 Agents: Hard rejection (Foundational flaws, too niche, bad timing, or already have a superior solution).
     
+    2. SENTIMENT & FEEDBACK:
+       - Agents MUST disagree.
+       - Include critical points like: "Too niche," "I already use X and it's better," "Not worth the subscription," "Unclear value proposition," "Bad timing," "Too complex."
+    
+    3. QUANTITATIVE BENCHMARKS:
+       - 'wouldUsePercent' (Adoption Rate) should rarely exceed 60%.
+       - 'wouldPayPercent' (Paying Conversion) should rarely exceed 30%.
+       - Overall Score should reflect a realistic, often mediocre, market reception.
+
+    4. AGENT BUDGET:
+       - Each agent has a mental budget of ₹1000 for this category.
+
     You MUST return an object with the following structure:
     {
       "overallAnalysis": {
@@ -72,7 +88,7 @@ const simulateProductEvaluationFlow = ai.defineFlow(
         "wouldUsePercent": 0-100,
         "wouldPayPercent": 0-100,
         "topAudience": "description",
-        "summary": "comprehensive executive summary"
+        "summary": "comprehensive executive summary highlighting both potential and significant friction points"
       },
       "agents": [
         {
@@ -87,14 +103,13 @@ const simulateProductEvaluationFlow = ai.defineFlow(
           "priceWilling": "string",
           "timeToAdopt": "string",
           "reason": "short explanation of decision",
-          "feedback": "detailed advice for the founder"
+          "feedback": "detailed, potentially harsh advice for the founder"
         }
-      ] (10 items)
+      ] (Exactly 10 items)
     }`;
 
     const response = await callLLM(prompt);
     
-    // Ensure agents array always exists for UI safety
     if (!response.agents) {
       response.agents = [];
     }

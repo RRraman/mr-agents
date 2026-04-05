@@ -1,8 +1,7 @@
-
 'use server';
 
 /**
- * @fileOverview Groq LLM integration utility with robust JSON parsing and Demo Mode fallback.
+ * @fileOverview Groq LLM integration utility with robust JSON parsing and Realistic Demo Mode fallback.
  */
 
 export async function callLLM(prompt: string) {
@@ -10,160 +9,158 @@ export async function callLLM(prompt: string) {
   
   // Demo Mode Fallback if API Key is missing or placeholder
   if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === '') {
-    console.warn('GROQ_API_KEY is not set or is a placeholder. Returning demo simulation data.');
+    console.warn('GROQ_API_KEY is not set. Returning realistic demo simulation data.');
     
-    // Simulate a brief delay for realism
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Return high-quality mock data structure that matches the expected schema
     return {
       overallAnalysis: {
-        overallScore: 78,
-        wouldUsePercent: 85,
-        wouldPayPercent: 60,
-        topAudience: "Early-stage SaaS founders and solo developers",
-        summary: "DEMO MODE: The product concept shows strong initial appeal among developers, particularly for its automation capabilities. Pricing at ₹1000 is seen as fair by 60% of the sample, though budget-conscious students might hesitate."
+        overallScore: 42,
+        wouldUsePercent: 50,
+        wouldPayPercent: 20,
+        topAudience: "Niche productivity hackers and solo developers",
+        summary: "DEMO MODE: The product concept has a lukewarm reception. While 50% see the technical value, high price sensitivity and the existence of 'good enough' free alternatives are major barriers. Most agents are skeptical of adding another subscription to their stack."
       },
       agents: [
         {
           name: "Arjun Mehta",
           role: "Senior Full-Stack Developer",
-          personality: "Pragmatic, efficiency-focused, slightly skeptical of over-hyped tools.",
-          goal: "Automate repetitive infrastructure tasks to focus on core logic.",
-          problem: "Spends 4+ hours a week on manual deployment configurations.",
-          score: 85,
+          personality: "Pragmatic, efficiency-focused, skeptical.",
+          goal: "Automate repetitive tasks.",
+          problem: "Too many low-value manual steps.",
+          score: 82,
           wouldUse: true,
           wouldPay: true,
-          priceWilling: "₹800 - ₹1200",
-          timeToAdopt: "Immediate (1-3 days)",
-          reason: "Solves a specific bottleneck I encounter daily.",
-          feedback: "Focus on making the integration with existing CI/CD pipelines as seamless as possible. That is where you win me over."
+          priceWilling: "₹800",
+          timeToAdopt: "Immediate",
+          reason: "Solves a real pain point I have right now.",
+          feedback: "Good tool, but simplify the onboarding. If it takes more than 5 minutes to set up, I'm out."
         },
         {
-          name: "Priya Sharma",
-          role: "UX Researcher",
-          personality: "Analytical, user-centric, values clean interfaces and clear documentation.",
-          goal: "Streamline qualitative data analysis pipelines.",
-          problem: "Drowning in raw interview transcripts without a clear synthesis tool.",
+          name: "Sarah Jenkins",
+          role: "Freelance Designer",
+          personality: "Creative, budget-conscious.",
+          goal: "Manage client projects faster.",
+          problem: "Invoicing is a nightmare.",
+          score: 55,
+          wouldUse: true,
+          wouldPay: false,
+          priceWilling: "₹0",
+          timeToAdopt: "Next week",
+          reason: "Useful, but I'd only use a free tier. I can't justify ₹1000/month for this.",
+          feedback: "Add a free tier for individuals. Your pricing is built for teams, not freelancers."
+        },
+        {
+          name: "David Okafor",
+          role: "Product Manager",
+          personality: "Analytical, ROI-focused.",
+          goal: "Improve team velocity.",
+          problem: "Engineering bottleneck.",
+          score: 65,
+          wouldUse: true,
+          wouldPay: true,
+          priceWilling: "₹1000",
+          timeToAdopt: "1 month",
+          reason: "Potential ROI is high if adoption is easy.",
+          feedback: "Show me a comparison with Jira and Linear. Why should I switch?"
+        },
+        {
+          name: "Elena Rossi",
+          role: "Student / Aspiring Dev",
+          personality: "Curious, no budget.",
+          goal: "Build a portfolio.",
+          problem: "SaaS costs are too high.",
+          score: 40,
+          wouldUse: true,
+          wouldPay: false,
+          priceWilling: "₹100",
+          timeToAdopt: "N/A",
+          reason: "Too expensive for a student budget.",
+          feedback: "I'll wait for an open-source clone."
+        },
+        {
+          name: "Marcus Thorne",
+          role: "CTO",
+          personality: "Security-focused, busy.",
+          goal: "Compliance and scaling.",
+          problem: "Security vulnerabilities in 3rd party tools.",
+          score: 15,
+          wouldUse: false,
+          wouldPay: false,
+          priceWilling: "₹0",
+          timeToAdopt: "Never",
+          reason: "Doesn't meet enterprise security standards.",
+          feedback: "Without SOC2, my team isn't even allowed to look at your landing page."
+        },
+        {
+          name: "Aisha Khan",
+          role: "Growth Marketer",
+          personality: "Data-driven, impatient.",
+          goal: "Scale user acquisition.",
+          problem: "High churn rate.",
+          score: 30,
+          wouldUse: false,
+          wouldPay: false,
+          priceWilling: "₹0",
+          timeToAdopt: "N/A",
+          reason: "Not a priority right now. We have bigger fires to put out.",
+          feedback: "This feels like a 'nice to have', not a 'must have'."
+        },
+        {
+          name: "Liam O'Connor",
+          role: "DevOps Engineer",
+          personality: "Automation freak, CLI lover.",
+          goal: "Zero-touch infra.",
+          problem: "Documentation is usually trash.",
+          score: 75,
+          wouldUse: true,
+          wouldPay: false,
+          priceWilling: "₹0",
+          timeToAdopt: "Tomorrow",
+          reason: "I'll try it if there is a robust API, but I won't pay for UI features.",
+          feedback: "Focus on your API and documentation. That's your product."
+        },
+        {
+          name: "Sophie Dubois",
+          role: "E-commerce Owner",
+          personality: "Traditional, tech-averse.",
+          goal: "Increase sales.",
+          problem: "Low conversion rates.",
+          score: 10,
+          wouldUse: false,
+          wouldPay: false,
+          priceWilling: "₹0",
+          timeToAdopt: "Never",
+          reason: "Too technical. I don't understand what this does.",
+          feedback: "Explain it in plain English. I'm not a coder."
+        },
+        {
+          name: "Kevin Chen",
+          role: "Startup Founder",
+          personality: "Visionary, fast-moving.",
+          goal: "Get to PMF.",
+          problem: "Moving too slow.",
           score: 45,
           wouldUse: false,
           wouldPay: false,
           priceWilling: "₹0",
           timeToAdopt: "N/A",
-          reason: "Doesn't quite fit my specific workflow for user research synthesis.",
-          feedback: "While the tech is cool, it feels more like a dev tool than something for design or research. Be clear about your niche."
+          reason: "Already using a similar tool that integrates with my stack.",
+          feedback: "Your competition is already ahead. You need a unique angle."
         },
         {
-          name: "Kevin Chen",
-          role: "Startup Founder (Seed Stage)",
-          personality: "Visionary, fast-moving, high risk tolerance, budget-sensitive.",
-          goal: "Ship MVP in 2 weeks with minimal burn.",
-          problem: "Limited engineering resources to build internal dev-ops tooling.",
-          score: 92,
-          wouldUse: true,
-          wouldPay: true,
-          priceWilling: "₹1000",
-          timeToAdopt: "Instant",
-          reason: "Saves me from hiring a part-time dev-ops person right now.",
-          feedback: "If you can offer a 'pro' tier with more support, I'd pay even more once we scale."
-        },
-        {
-          name: "Sarah Jenkins",
-          role: "Freelance Content Creator",
-          personality: "Creative, tech-averse, relies on simple 'no-code' solutions.",
-          goal: "Build a community without learning to code.",
-          problem: "Managing memberships across 3 different platforms is a nightmare.",
-          score: 30,
-          wouldUse: false,
-          wouldPay: false,
-          priceWilling: "₹200",
-          timeToAdopt: "N/A",
-          reason: "Too technical. I don't understand the API terminology.",
-          feedback: "Make a version with a simpler dashboard for people like me who just want a 'buy' button."
-        },
-        {
-          name: "David Okafor",
-          role: "Product Manager",
-          personality: "Data-driven, concerned with scalability and ROI.",
-          goal: "Reduce time-to-market for new feature experiments.",
-          problem: "The engineering queue is 6 months long.",
-          score: 75,
-          wouldUse: true,
-          wouldPay: true,
-          priceWilling: "₹1500",
-          timeToAdopt: "2-4 weeks",
-          reason: "Allows product teams to move faster without constant engineering hand-holding.",
-          feedback: "Show me a clear ROI calculator based on developer hours saved."
-        },
-        {
-          name: "Elena Rossi",
-          role: "CS Student",
-          personality: "Eager to learn, extremely low budget, loves open source.",
-          goal: "Build a portfolio project that stands out.",
-          problem: "Can't afford paid SaaS subscriptions for small personal projects.",
-          score: 60,
-          wouldUse: true,
-          wouldPay: false,
-          priceWilling: "₹100",
-          timeToAdopt: "Next project",
-          reason: "Useful tool, but the ₹1000 price point is too high for a student.",
-          feedback: "Consider a free student tier to build brand loyalty early."
-        },
-        {
-          name: "Marcus Thorne",
-          role: "Enterprise CTO",
-          personality: "Security-obsessed, highly cautious, looks for SOC2 compliance.",
-          goal: "Consolidate toolchain and improve security posture.",
-          problem: "Shadow IT where developers use unapproved third-party tools.",
-          score: 20,
+          name: "Priya Sharma",
+          role: "HR Manager",
+          personality: "People-first, process-oriented.",
+          goal: "Improve employee retention.",
+          problem: "Burnout in the dev team.",
+          score: 5,
           wouldUse: false,
           wouldPay: false,
           priceWilling: "₹0",
           timeToAdopt: "Never",
-          reason: "No clear enterprise security documentation.",
-          feedback: "You need to talk about data residency and security before a company of my size will even look at you."
-        },
-        {
-          name: "Aisha Khan",
-          role: "Growth Marketer",
-          personality: "Experiment-driven, focused on conversion and attribution.",
-          goal: "Automate A/B testing of landing pages.",
-          problem: "Dependence on devs for simple tracking script changes.",
-          score: 55,
-          wouldUse: true,
-          wouldPay: false,
-          priceWilling: "₹500",
-          timeToAdopt: "Next campaign",
-          reason: "Interesting, but I'm not sure if it solves my specific marketing tech problems better than existing tools.",
-          feedback: "Partner with marketing agencies to get broader adoption."
-        },
-        {
-          name: "Liam O'Connor",
-          role: "DevOps Engineer",
-          personality: "Loves automation, hates 'black box' solutions, prefers CLI.",
-          goal: "Zero-touch infrastructure.",
-          problem: "Debugging complex, poorly documented cloud configs.",
-          score: 88,
-          wouldUse: true,
-          wouldPay: true,
-          priceWilling: "₹900",
-          timeToAdopt: "Immediate",
-          reason: "The clarity of documentation and focus on a single problem is refreshing.",
-          feedback: "Keep it simple. Don't add too many features. Do one thing perfectly."
-        },
-        {
-          name: "Sophie Dubois",
-          role: "E-commerce Owner",
-          personality: "Business-first, looks for direct impact on revenue.",
-          goal: "Increase repeat purchase rate.",
-          problem: "Generic email marketing isn't working anymore.",
-          score: 15,
-          wouldUse: false,
-          wouldPay: false,
-          priceWilling: "₹0",
-          timeToAdopt: "N/A",
-          reason: "This product is for software developers, not shop owners.",
-          feedback: "Clearly state who this is NOT for on your homepage to save people time."
+          reason: "Completely irrelevant to my department.",
+          feedback: "Target developers, not general business managers."
         }
       ]
     };
@@ -180,7 +177,7 @@ export async function callLLM(prompt: string) {
       messages: [
         {
           role: 'system',
-          content: 'You are MR.Agents simulation engine. Return JSON only.',
+          content: 'You are MR.Agents simulation engine. Return ONLY valid JSON. No markdown. No explanation. No text before or after JSON. Always return an object with overallAnalysis (containing overallScore, wouldUsePercent, wouldPayPercent, topAudience, summary) and agents (array of 10 items).',
         },
         {
           role: 'user',
