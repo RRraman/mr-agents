@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,13 +9,28 @@ import { MarketResults } from '@/components/market-results';
 import { Loader2, Rocket, Info, LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SimulateProductEvaluationOutput } from '@/ai/flows/simulate-product-evaluation';
+import { useFirestore, useUser, useAuth } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 export default function HomePage() {
   const [productIdea, setProductIdea] = useState('');
   const [evaluationType, setEvaluationType] = useState<'Product Feedback' | 'Market Fit' | 'First Paying Users'>('Product Feedback');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<SimulateProductEvaluationOutput | null>(null);
+  
   const { toast } = useToast();
+  const { firestore } = useFirestore();
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+
+  // Ensure user is signed in anonymously to save results
+  useEffect(() => {
+    if (!isUserLoading && !user && auth) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, isUserLoading, auth]);
 
   const handleRunSimulation = async () => {
     if (!productIdea.trim()) {
@@ -27,14 +42,57 @@ export default function HomePage() {
       return;
     }
 
+    if (!user) {
+      toast({
+        title: "Authenticating",
+        description: "Please wait while we set up your session.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     setResults(null);
     
     try {
       const response = await runSimulation({ productIdea, evaluationType });
       if (response.success && response.data) {
-        console.log("Simulation result:", response.data);
         setResults(response.data);
+        
+        // Save results to Firestore on the client
+        const simId = doc(collection(firestore, 'temp')).id;
+        const simRef = doc(firestore, 'users', user.uid, 'simulations', simId);
+        
+        const agentResultIds = response.data.agents.map(() => doc(collection(firestore, 'temp')).id);
+
+        // Prepare the simulation document
+        const simulationData = {
+          id: simId,
+          input: productIdea,
+          evaluationType: evaluationType,
+          overallScore: response.data.overallAnalysis.overallScore,
+          wouldUsePercent: response.data.overallAnalysis.wouldUsePercent,
+          wouldPayPercent: response.data.overallAnalysis.wouldPayPercent,
+          topAudience: response.data.overallAnalysis.topAudience,
+          summary: response.data.overallAnalysis.summary,
+          createdAt: new Date().toISOString(),
+          agentResultIds: agentResultIds
+        };
+
+        // Save simulation metadata
+        setDocumentNonBlocking(simRef, simulationData, { merge: true });
+
+        // Save individual agent results
+        response.data.agents.forEach((agent, index) => {
+          const agentId = agentResultIds[index];
+          const agentRef = doc(firestore, 'users', user.uid, 'simulations', simId, 'agentResults', agentId);
+          setDocumentNonBlocking(agentRef, {
+            ...agent,
+            id: agentId,
+            simulationId: simId
+          }, { merge: true });
+        });
+
         toast({
           title: "Simulation Complete",
           description: "10 AI agents have evaluated your product idea.",
@@ -70,7 +128,6 @@ export default function HomePage() {
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Input Sidebar */}
         <aside className="lg:col-span-4 space-y-6">
           <div className="p-6 rounded-2xl bg-card border border-white/5 shadow-2xl space-y-6">
             <div className="space-y-2">
@@ -103,7 +160,7 @@ export default function HomePage() {
             <Button 
               className="w-full h-12 text-lg font-headline font-bold bg-primary hover:bg-primary/90 text-white shadow-lg transition-all active:scale-95"
               onClick={handleRunSimulation}
-              disabled={isLoading}
+              disabled={isLoading || isUserLoading}
             >
               {isLoading ? (
                 <>
@@ -127,7 +184,6 @@ export default function HomePage() {
           </div>
         </aside>
 
-        {/* Results Main Area */}
         <main className="lg:col-span-8">
           {results ? (
             <MarketResults results={results} />
