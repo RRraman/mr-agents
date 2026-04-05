@@ -1,0 +1,86 @@
+/**
+ * AI Market Simulator Security Rules
+ *
+ * Core Philosophy:
+ * This ruleset implements a strict hierarchical ownership model. All application data is
+ * logically nested under specific user accounts. Access is granted solely based on the 
+ * authenticated user's UID matching the {userId} parameter in the Firestore path.
+ *
+ * Data Structure:
+ * - /users/{userId}/simulations/{simulationId}: Top-level simulation metadata and results.
+ * - /users/{userId}/simulations/{simulationId}/agentResults/{agentResultId}: Detailed 
+ *   individual agent feedback belonging to a specific simulation.
+ *
+ * Key Security Decisions:
+ * 1. Path-Based Authorization: By embedding the UID in the document path, we achieve 
+ *    high-performance authorization without requiring additional collection lookups (get() calls).
+ * 2. Prototyping Flexibility: While ownership is strictly enforced, the rules do not 
+ *    validate the specific schema of content fields (e.g., strings vs. numbers), allowing 
+ *    for rapid iteration of the simulation model.
+ * 3. Relational Integrity: On creation, we enforce that internal document IDs and 
+ *    parent references (like simulationId) match the resource path to ensure data consistency.
+ * 4. Recursive Security: Subcollections (agentResults) inherit the security context 
+ *    of their parent simulation path.
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** Checks if the request is made by an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Checks if the authenticated user's UID matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** 
+     * Ensures the document exists and the requester is the owner.
+     * Used for update and delete operations to prevent acting on null resources.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for the 'Simulation' entity. Enforces that only the owner can manage their simulations.
+     * @path /users/{userId}/simulations/{simulationId}
+     * @allow (get/list) if authenticated UID matches {userId}.
+     * @deny (create) if the internal 'id' field does not match the path 'simulationId'.
+     * @principle Restricts access to a user's own data tree and validates path consistency.
+     */
+    match /users/{userId}/simulations/{simulationId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == simulationId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for 'AgentSimulationResult'. Inherits ownership from the parent user path.
+       * @path /users/{userId}/simulations/{simulationId}/agentResults/{agentResultId}
+       * @allow (create) if the user is the owner and the document references the correct parent simulation.
+       * @deny (update) if an attempt is made to change the 'simulationId' reference.
+       * @principle Maintains relational integrity between agents and their parent simulation.
+       */
+      match /agentResults/{agentResultId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.simulationId == simulationId;
+        allow update: if isExistingOwner(userId) && request.resource.data.simulationId == resource.data.simulationId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    // --- DEFAULT DENY ---
+    // Explicitly deny all other access to the database by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
