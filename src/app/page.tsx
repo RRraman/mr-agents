@@ -1,15 +1,15 @@
-
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { runSimulation } from '@/app/actions/simulation';
 import { MarketResults } from '@/components/market-results';
 import { BrutalResults } from '@/components/brutal-results';
 import { ChatInterface } from '@/components/chat-interface';
-import { Loader2, Rocket, Info, LayoutDashboard, Brain, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Loader2, Rocket, Info, LayoutDashboard, Brain, MessageSquare, AlertTriangle, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useAuth } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
@@ -19,6 +19,7 @@ import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 export default function HomePage() {
   const [productIdea, setProductIdea] = useState('');
   const [mode, setMode] = useState<'market_analysis' | 'brutal_feedback' | 'first_paying_users'>('market_analysis');
+  const [webIntelligence, setWebIntelligence] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<any | null>(null);
   
@@ -43,7 +44,7 @@ export default function HomePage() {
     setResults(null);
     
     try {
-      const response = await runSimulation({ productIdea, mode });
+      const response = await runSimulation({ productIdea, mode, webIntelligence });
       if (response.success && response.data) {
         setResults(response.data);
         
@@ -98,7 +99,7 @@ export default function HomePage() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <label className="text-sm font-medium text-muted-foreground">Simulation Engine</label>
               <div className="grid grid-cols-1 gap-2">
                 <Button 
@@ -125,6 +126,23 @@ export default function HomePage() {
               </div>
             </div>
 
+            {mode === 'market_analysis' && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-accent" />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="web-intel" className="text-sm cursor-pointer">Web Intelligence</Label>
+                    <p className="text-[10px] text-muted-foreground">Simulate market research</p>
+                  </div>
+                </div>
+                <Switch 
+                  id="web-intel" 
+                  checked={webIntelligence} 
+                  onCheckedChange={setWebIntelligence} 
+                />
+              </div>
+            )}
+
             <Button 
               className="w-full h-12 text-lg font-headline font-bold"
               onClick={handleRunSimulation}
@@ -148,6 +166,9 @@ export default function HomePage() {
                 <div className="text-center space-y-4">
                   <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
                   <p className="text-xl font-headline font-medium text-white">Initializing Engine...</p>
+                  <p className="text-xs text-muted-foreground italic">
+                    {webIntelligence ? "Simulating deep web research and competitor analysis..." : "Preparing simulation personas..."}
+                  </p>
                 </div>
               ) : (
                 <>

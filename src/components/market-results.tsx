@@ -1,7 +1,8 @@
 import { AgentCard } from "@/components/agent-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Users, CreditCard, Sparkles, TrendingUp, Info } from "lucide-react";
+import { Users, CreditCard, Sparkles, TrendingUp, Info, Globe, ShieldAlert, BarChart3, MessageCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface MarketResultsProps {
   results: {
@@ -10,12 +11,18 @@ interface MarketResultsProps {
     wouldPayPercent: number;
     topAudience: string;
     summary: string;
+    webIntelligence?: {
+      web_competition: string;
+      web_demand: string;
+      web_sentiment: string;
+      market_saturation: string;
+    } | null;
     agents: Array<any>;
   };
 }
 
 export function MarketResults({ results }: MarketResultsProps) {
-  const { overallScore, wouldUsePercent, wouldPayPercent, topAudience, summary, agents } = results;
+  const { overallScore, wouldUsePercent, wouldPayPercent, topAudience, summary, agents, webIntelligence } = results;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -53,6 +60,44 @@ export function MarketResults({ results }: MarketResultsProps) {
           </CardContent>
         </Card>
       </div>
+
+      {webIntelligence && (
+        <Card className="bg-card/40 border-accent/20 overflow-hidden">
+          <div className="bg-accent/10 px-6 py-3 border-b border-accent/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-accent" />
+              <h3 className="text-sm font-headline font-bold uppercase tracking-wider text-accent">Simulated Web Intelligence Insights</h3>
+            </div>
+            <Badge variant="outline" className="text-accent border-accent/30 text-[10px]">Step 0 Complete</Badge>
+          </div>
+          <CardContent className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                <ShieldAlert className="w-3 h-3" /> Competition
+              </p>
+              <p className="text-sm font-bold capitalize text-white">{webIntelligence.web_competition}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                <BarChart3 className="w-3 h-3" /> Market Demand
+              </p>
+              <p className="text-sm font-bold capitalize text-white">{webIntelligence.web_demand}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                <MessageCircle className="w-3 h-3" /> Sentiment
+              </p>
+              <p className="text-sm font-bold capitalize text-white">{webIntelligence.web_sentiment}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                <TrendingUp className="w-3 h-3" /> Saturation
+              </p>
+              <p className="text-sm font-bold capitalize text-white">{webIntelligence.market_saturation}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-card/30 border-white/5">

@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Main simulation flow supporting 3 distinct modes with signal-based dynamic scoring and detail inference.
+ * @fileOverview Main simulation flow supporting 3 distinct modes with signal-based dynamic scoring, detail inference, and a web intelligence layer.
  */
 
 import { ai } from '@/ai/genkit';
@@ -10,6 +10,7 @@ import { callLLM } from '@/ai/groq';
 const SimulateProductEvaluationInputSchema = z.object({
   productIdea: z.string(),
   mode: z.enum(['market_analysis', 'brutal_feedback', 'first_paying_users']),
+  webIntelligence: z.boolean().optional(),
   history: z.array(z.object({
     agent: z.string().optional(),
     message: z.string(),
@@ -29,11 +30,29 @@ const simulateProductEvaluationFlow = ai.defineFlow(
   },
   async (input) => {
     if (input.mode === 'market_analysis') {
+      const webIntelPrompt = input.webIntelligence ? `
+      STEP 0: SIMULATED WEB INTELLIGENCE LAYER
+      Before scoring, simulate a deep web research phase for the product idea:
+      - web_competition: [low | medium | high] (Analyze existing players/alternatives in this category)
+      - web_demand: [low | medium | high] (Analyze search volume/problem awareness for this specific pain point)
+      - web_sentiment: [negative | mixed | positive] (Analyze social proof/user pain points online regarding similar tools)
+      - market_saturation: [none | moderate | saturated] (Analyze how many "AI clones" or incumbents exist)
+
+      Map these findings to signals:
+      - If web_competition = high: Apply "Crowded market" penalty.
+      - If market_saturation = saturated: Reduce adoption probability by -10 for all agents.
+      - If web_demand = high: Apply "Clear ROI" or "Urgent pain" boost.
+      - If web_sentiment = negative: Reduce pay probability by -15 for all agents.
+      - If web_sentiment = positive: Increase adoption probability by +10 for all agents.
+      ` : '';
+
       const systemPrompt = `You are MR.Agents simulation engine. 
       
       CRITICAL RULE: Every aggregate metric MUST be calculated directly from the individual decisions of 10 agents. Do NOT use hardcoded or fixed scores. Do NOT normalize or force results into specific ranges. Let scores vary naturally based on logic.
 
-      STEP 0: INFERENCE & ASSUMPTIONS FOR MISSING DETAILS
+      ${webIntelPrompt}
+
+      STEP 1: INFERENCE & ASSUMPTIONS FOR MISSING DETAILS
       If the product concept is short or lacks detail, agents MUST infer realistic assumptions before applying scoring:
       - Missing target users: Assume a broad, generic audience.
       - Missing pricing: Assume moderate willingness to pay but poor justification.
@@ -43,14 +62,14 @@ const simulateProductEvaluationFlow = ai.defineFlow(
       - Missing niche: Assume a generic AI tool.
       Detailed inputs provided by the user MUST always override these assumptions. Direct scoring applies where details exist.
 
-      STEP 1: Generate 10 diverse and realistic personas.
+      STEP 2: Generate 10 diverse and realistic personas.
       
-      STEP 2: AGENT EVALUATION LOGIC (Apply per agent):
+      STEP 3: AGENT EVALUATION LOGIC (Apply per agent):
       Start neutral:
       - adoption_probability = 50%
       - pay_probability = 20%
 
-      Evaluate these SIGNALS for the product idea (including inferred assumptions where details are missing):
+      Evaluate these SIGNALS for the product idea (including inferred assumptions AND web intelligence findings):
       
       POSITIVE BOOSTS:
       - Clear ROI (makes/saves money): +15 adoption, +20 pay
@@ -70,12 +89,12 @@ const simulateProductEvaluationFlow = ai.defineFlow(
       - Free alternatives available: -15 adoption, -15 pay
       - Requires behavior change: -10 adoption, -5 pay
 
-      STEP 3: AGENT DECISION:
+      STEP 4: AGENT DECISION:
       - wouldUse = (final adoption_probability > 50)
       - wouldPay = (final pay_probability > 40)
       - confidenceScore = (A 0-100 rating based on how strongly the signals align)
 
-      STEP 4: COMPUTE AGGREGATE METRICS:
+      STEP 5: COMPUTE AGGREGATE METRICS:
       - adoptionRate = (Number of agents where wouldUse is true / 10) * 100
       - payingRate = (Number of agents where wouldPay is true / 10) * 100
       - avgAgentConfidence = (Sum of all 10 confidenceScores) / 10
@@ -90,6 +109,7 @@ const simulateProductEvaluationFlow = ai.defineFlow(
         "wouldPayPercent": number,
         "topAudience": "string",
         "summary": "Executive analysis based on found signals and inferences",
+        "webIntelligence": ${input.webIntelligence ? '{ "web_competition": "low|medium|high", "web_demand": "low|medium|high", "web_sentiment": "negative|mixed|positive", "market_saturation": "none|moderate|saturated" }' : 'null'},
         "agents": [
           {
             "name": "string",
@@ -102,7 +122,7 @@ const simulateProductEvaluationFlow = ai.defineFlow(
             "wouldUse": boolean,
             "wouldPay": boolean,
             "priceWilling": "string",
-            "reason": "Detailed reasoning explaining the probability shift from signals or inferences",
+            "reason": "Detailed reasoning explaining the probability shift from signals, inferences, or web research",
             "feedback": "Direct advice"
           }
         ]
