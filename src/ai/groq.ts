@@ -19,7 +19,7 @@ export async function callLLM(prompt: string, systemPrompt?: string) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages: [
         {
           role: 'system',
@@ -31,7 +31,7 @@ export async function callLLM(prompt: string, systemPrompt?: string) {
         },
       ],
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 800,
       response_format: { type: 'json_object' }
     }),
   });

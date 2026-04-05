@@ -9,22 +9,29 @@ import { runSimulation } from '@/app/actions/simulation';
 import { MarketResults } from '@/components/market-results';
 import { BrutalResults } from '@/components/brutal-results';
 import { ChatInterface } from '@/components/chat-interface';
-import { Loader2, Rocket, Info, LayoutDashboard, Brain, MessageSquare, AlertTriangle, Globe } from 'lucide-react';
+import { MootbookDiscussion } from '@/components/mootbook-discussion';
+import { Loader2, Rocket, Info, LayoutDashboard, Brain, MessageSquare, AlertTriangle, Globe, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useAuth } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
+type Mode = 'market_analysis' | 'brutal_feedback' | 'first_paying_users' | 'agent_convo';
+
 export default function HomePage() {
   const [productIdea, setProductIdea] = useState('');
-  const [mode, setMode] = useState<'market_analysis' | 'brutal_feedback' | 'first_paying_users'>('market_analysis');
+  const [mode, setMode] = useState<Mode>('market_analysis');
   const [webIntelligence, setWebIntelligence] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<any | null>(null);
-  
+  const [agentConvoStarted, setAgentConvoStarted] = useState(false);
+  const [marketResults, setMarketResults] = useState<any | null>(null);
+  const [brutalResults, setBrutalResults] = useState<any | null>(null);
+  const [chatResults, setChatResults] = useState<any | null>(null);
+
   const { toast } = useToast();
-  const { firestore } = useFirestore();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
 
@@ -40,14 +47,22 @@ export default function HomePage() {
       return;
     }
 
+    if (mode === 'agent_convo') {
+      setAgentConvoStarted(true);
+      return;
+    }
+
     setIsLoading(true);
     setResults(null);
-    
+
     try {
       const response = await runSimulation({ productIdea, mode, webIntelligence });
       if (response.success && response.data) {
         setResults(response.data);
-        
+        if (mode === 'market_analysis') setMarketResults(response.data);
+        if (mode === 'brutal_feedback') setBrutalResults(response.data);
+        if (mode === 'first_paying_users') setChatResults(response.data);
+
         if (firestore && user && mode !== 'first_paying_users') {
           const simRef = doc(collection(firestore, 'users', user.uid, 'simulations'));
           setDocumentNonBlocking(simRef, {
@@ -67,6 +82,20 @@ export default function HomePage() {
       setIsLoading(false);
     }
   };
+
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    setResults(null);
+    setAgentConvoStarted(false);
+  };
+
+  const simulationContext = {
+    marketResults: marketResults || undefined,
+    brutalResults: brutalResults || undefined,
+    chatResults: chatResults || undefined,
+  };
+
+  const hasAnyContext = !!(marketResults || brutalResults || chatResults);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 space-y-12">
@@ -91,7 +120,7 @@ export default function HomePage() {
                 <Info className="w-4 h-4" />
                 Product Concept
               </label>
-              <Textarea 
+              <Textarea
                 placeholder="Describe your idea or paste a link..."
                 className="min-h-[150px] bg-background border-white/10"
                 value={productIdea}
@@ -102,26 +131,37 @@ export default function HomePage() {
             <div className="space-y-4">
               <label className="text-sm font-medium text-muted-foreground">Simulation Engine</label>
               <div className="grid grid-cols-1 gap-2">
-                <Button 
+                <Button
                   variant={mode === 'market_analysis' ? 'default' : 'outline'}
                   className="justify-start gap-2"
-                  onClick={() => setMode('market_analysis')}
+                  onClick={() => handleModeChange('market_analysis')}
                 >
                   <Brain className="w-4 h-4" /> Market Analysis
+                  {marketResults && <span className="ml-auto text-xs text-green-400">✓</span>}
                 </Button>
-                <Button 
+                <Button
                   variant={mode === 'brutal_feedback' ? 'default' : 'outline'}
                   className="justify-start gap-2 text-red-400 border-red-900/20"
-                  onClick={() => setMode('brutal_feedback')}
+                  onClick={() => handleModeChange('brutal_feedback')}
                 >
                   <AlertTriangle className="w-4 h-4" /> Brutal Feedback
+                  {brutalResults && <span className="ml-auto text-xs text-green-400">✓</span>}
                 </Button>
-                <Button 
+                <Button
                   variant={mode === 'first_paying_users' ? 'default' : 'outline'}
                   className="justify-start gap-2 text-cyan-400 border-cyan-900/20"
-                  onClick={() => setMode('first_paying_users')}
+                  onClick={() => handleModeChange('first_paying_users')}
                 >
                   <MessageSquare className="w-4 h-4" /> Paying Users Chat
+                  {chatResults && <span className="ml-auto text-xs text-green-400">✓</span>}
+                </Button>
+                <Button
+                  variant={mode === 'agent_convo' ? 'default' : 'outline'}
+                  className="justify-start gap-2 text-purple-400 border-purple-900/20"
+                  onClick={() => handleModeChange('agent_convo')}
+                >
+                  <Users className="w-4 h-4" /> Agent Convo
+                  {hasAnyContext && <span className="ml-auto text-xs text-purple-400">📊</span>}
                 </Button>
               </div>
             </div>
@@ -135,26 +175,38 @@ export default function HomePage() {
                     <p className="text-[10px] text-muted-foreground">Simulate market research</p>
                   </div>
                 </div>
-                <Switch 
-                  id="web-intel" 
-                  checked={webIntelligence} 
-                  onCheckedChange={setWebIntelligence} 
+                <Switch
+                  id="web-intel"
+                  checked={webIntelligence}
+                  onCheckedChange={setWebIntelligence}
                 />
               </div>
             )}
 
-            <Button 
+            {mode === 'agent_convo' && (
+              <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <p className="text-xs text-purple-300">
+                  {hasAnyContext
+                    ? `📊 Agents will use your data: ${[marketResults && 'Market', brutalResults && 'Brutal', chatResults && 'Chat'].filter(Boolean).join(', ')}`
+                    : '5 agents debate your idea fresh — run other engines first for richer convo.'}
+                </p>
+              </div>
+            )}
+
+            <Button
               className="w-full h-12 text-lg font-headline font-bold"
               onClick={handleRunSimulation}
               disabled={isLoading}
             >
-              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Start Simulation'}
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : mode === 'agent_convo' ? 'Start Agent Convo' : 'Start Simulation'}
             </Button>
           </div>
         </aside>
 
         <main className="lg:col-span-8">
-          {results ? (
+          {mode === 'agent_convo' && agentConvoStarted ? (
+            <MootbookDiscussion productIdea={productIdea} context={simulationContext} />
+          ) : results ? (
             <>
               {mode === 'market_analysis' && <MarketResults results={results} />}
               {mode === 'brutal_feedback' && <BrutalResults results={results} />}
@@ -173,7 +225,9 @@ export default function HomePage() {
               ) : (
                 <>
                   <LayoutDashboard className="w-16 h-16 opacity-20" />
-                  <p className="text-lg font-medium text-center px-6">Select an engine and run simulation.</p>
+                  <p className="text-lg font-medium text-center px-6">
+                    {mode === 'agent_convo' ? 'Enter your idea and start Agent Convo.' : 'Select an engine and run simulation.'}
+                  </p>
                 </>
               )}
             </div>
