@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Main simulation flow supporting 3 distinct modes with dynamic scoring.
+ * @fileOverview Main simulation flow supporting 3 distinct modes with strictly dynamic scoring.
  */
 
 import { ai } from '@/ai/genkit';
@@ -29,34 +29,36 @@ const simulateProductEvaluationFlow = ai.defineFlow(
   },
   async (input) => {
     if (input.mode === 'market_analysis') {
-      const systemPrompt = `You are MR.Agents simulation engine. Purpose: Dynamic, realistic market validation.
+      const systemPrompt = `You are MR.Agents simulation engine. 
       
-      CRITICAL RULE: Each agent must decide INDEPENDENTLY based on the product idea's quality. Do NOT force a fixed distribution of buyers or rejectors.
+      CRITICAL RULE: Every aggregate metric MUST be calculated directly from the individual decisions of the 10 agents you generate. Do NOT use hardcoded or fixed scores.
       
-      Evaluation Criteria for each of the 10 agents:
-      - Problem clarity and urgency: Is it a "must-have" or "nice-to-have"?
-      - Uniqueness: How does it stand out from competitors?
-      - Competition: What are they using now?
-      - Willingness to Pay: Is the value high enough for their specific persona's budget?
-      - Complexity: Is the solution easy for them to adopt?
+      STEP 1: Generate 10 diverse and realistic personas.
+      Each persona MUST independently evaluate the product based on:
+      - Problem clarity and urgency.
+      - Uniqueness vs. existing solutions.
+      - Willingness to pay vs. their specific persona budget.
       
-      Realistic Scoring Benchmarks:
-      - Strong ideas: High individual scores (80+), ~60-80% aggregate adoption, ~20-40% aggregate paying conversion.
-      - Average ideas: Mid individual scores (50-70), ~30-60% aggregate adoption, ~10-25% aggregate paying conversion.
-      - Weak ideas: Low individual scores (<50), ~10-30% aggregate adoption, ~0-10% aggregate paying conversion.
-      - Bad ideas: Very low scores, <15% aggregate adoption, <5% aggregate paying conversion.
+      STEP 2: For each agent, set:
+      - score: (0-100) individual rating.
+      - wouldUse: boolean.
+      - wouldPay: boolean.
       
-      Calculations (YOU MUST COMPUTE THESE BASED ON YOUR 10 GENERATED AGENTS):
-      - wouldUsePercent = (Count of agents where wouldUse is true / 10) * 100
-      - wouldPayPercent = (Count of agents where wouldPay is true / 10) * 100
-      - avgAgentScore = Average of the individual 'score' fields of the 10 agents.
-      - overallScore = (wouldUsePercent * 0.4) + (wouldPayPercent * 0.3) + (avgAgentScore * 0.3)
+      STEP 3: COMPUTE AGGREGATE METRICS (Calculated from Step 2):
+      - wouldUsePercent = (Number of agents where wouldUse is true / 10) * 100
+      - wouldPayPercent = (Number of agents where wouldPay is true / 10) * 100
+      - avgAgentScore = (Sum of all 10 individual 'score' fields) / 10
+      - overallScore = (wouldUsePercent * 0.4) + (wouldPayPercent * 0.35) + (avgAgentScore * 0.25)
       
-      Do NOT clamp or normalize these values to arbitrary round numbers. Return real computed results.
-
+      Expected Score Ranges (for your guidance, but let the math decide):
+      - Strong ideas: overallScore 65–85
+      - Average ideas: overallScore 40–65
+      - Weak ideas: overallScore 20–40
+      - Bad ideas: overallScore 0–20
+      
       Return ONLY valid JSON:
       {
-        "overallScore": number (0-100),
+        "overallScore": number (0-100, clamped),
         "wouldUsePercent": number (0-100),
         "wouldPayPercent": number (0-100),
         "topAudience": "string (concise description of most likely segment)",
