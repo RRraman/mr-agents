@@ -9,7 +9,7 @@ export async function callLLM(prompt: string) {
   const apiKey = process.env.GROQ_API_KEY;
   
   // Demo Mode Fallback if API Key is missing or placeholder
-  if (!apiKey || apiKey === 'your_groq_api_key_here') {
+  if (!apiKey || apiKey === 'your_groq_api_key_here' || apiKey === '') {
     console.warn('GROQ_API_KEY is not set or is a placeholder. Returning demo simulation data.');
     
     // Simulate a brief delay for realism
@@ -176,16 +176,11 @@ export async function callLLM(prompt: string) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.1-70b-versatile',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'system',
-          content: `You are MR.Agents simulation engine.
-Return ONLY valid JSON.
-No markdown.
-No explanation.
-No text before or after JSON.
-Always respond with a structured JSON object as requested.`,
+          content: 'You are MR.Agents simulation engine. Return JSON only.',
         },
         {
           role: 'user',
@@ -193,7 +188,7 @@ Always respond with a structured JSON object as requested.`,
         },
       ],
       temperature: 0.7,
-      max_tokens: 3000,
+      max_tokens: 1500,
       response_format: { type: 'json_object' }
     }),
   });
