@@ -1,49 +1,25 @@
+
 'use server';
 /**
- * @fileOverview This file defines the Genkit flow for simulating product evaluations using Groq AI.
- * It uses a single-shot prompt with strict realism constraints for better market validation.
+ * @fileOverview Main simulation flow supporting 3 distinct modes.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { callLLM } from '@/ai/groq';
 
-const AgentEvaluationOutputSchema = z.object({
-  name: z.string(),
-  role: z.string(),
-  personality: z.string(),
-  goal: z.string(),
-  problem: z.string(),
-  score: z.number().int().min(0).max(100),
-  wouldUse: z.boolean(),
-  wouldPay: z.boolean(),
-  priceWilling: z.string(),
-  timeToAdopt: z.string(),
-  reason: z.string(),
-  feedback: z.string(),
-});
-
-const OverallMarketAnalysisSchema = z.object({
-  overallScore: z.number(),
-  wouldUsePercent: z.number(),
-  wouldPayPercent: z.number(),
-  topAudience: z.string(),
-  summary: z.string(),
-});
-
 const SimulateProductEvaluationInputSchema = z.object({
   productIdea: z.string(),
-  evaluationType: z.enum(['Product Feedback', 'Market Fit', 'First Paying Users']),
+  mode: z.enum(['market_analysis', 'brutal_feedback', 'first_paying_users']),
+  history: z.array(z.object({
+    agent: z.string().optional(),
+    message: z.string(),
+    role: z.enum(['agent', 'user'])
+  })).optional()
 });
 export type SimulateProductEvaluationInput = z.infer<typeof SimulateProductEvaluationInputSchema>;
 
-const SimulateProductEvaluationOutputSchema = z.object({
-  agents: z.array(AgentEvaluationOutputSchema),
-  overallAnalysis: OverallMarketAnalysisSchema,
-});
-export type SimulateProductEvaluationOutput = z.infer<typeof SimulateProductEvaluationOutputSchema>;
-
-export async function simulateProductEvaluation(input: SimulateProductEvaluationInput): Promise<SimulateProductEvaluationOutput> {
+export async function simulateProductEvaluation(input: SimulateProductEvaluationInput): Promise<any> {
   return simulateProductEvaluationFlow(input);
 }
 
@@ -51,69 +27,37 @@ const simulateProductEvaluationFlow = ai.defineFlow(
   {
     name: 'simulateProductEvaluationFlow',
     inputSchema: SimulateProductEvaluationInputSchema,
-    outputSchema: SimulateProductEvaluationOutputSchema,
   },
   async (input) => {
-    const prompt = `Act as an expert market research engine. Conduct a CRITICAL and REALISTIC simulation for the following product idea:
+    if (input.mode === 'market_analysis') {
+      const systemPrompt = `You are MR.Agents simulation engine. Purpose: Realistic market validation. 
+      Distribution: 2 buyers, 3 interested, 2 free users, 3 rejectors. Tone: Analytical, Startup research.
+      Return JSON with: overallScore (0-100), wouldUsePercent (0-100), wouldPayPercent (0-100), topAudience, summary, agents (array of 10 items with name, role, score, reason, feedback).`;
+      
+      return await callLLM(`Evaluate: "${input.productIdea}"`, systemPrompt);
+    } 
     
-    PRODUCT IDEA: "${input.productIdea}"
-    EVALUATION FOCUS: "${input.evaluationType}"
-    
-    Your task is to generate 10 diverse AI personas (agents) and have them evaluate the product with BRUTAL HONESTY. This is market validation, NOT promotion.
-
-    REALISM CONSTRAINTS (Mandatory):
-    1. AGENT DISTRIBUTION (Strictly follow this for the 10 agents):
-       - 2 Agents: Enthusiastic early adopters / Strong buyers.
-       - 2 Agents: Interested in the concept but REFUSE to pay (looking for free alternatives).
-       - 2 Agents: Would only use a free version; price sensitivity is very high.
-       - 2 Agents: Complete indifference / Will ignore the product.
-       - 2 Agents: Hard rejection (Foundational flaws, too niche, bad timing, or already have a superior solution).
-    
-    2. SENTIMENT & FEEDBACK:
-       - Agents MUST disagree.
-       - Include critical points like: "Too niche," "I already use X and it's better," "Not worth the subscription," "Unclear value proposition," "Bad timing," "Too complex."
-    
-    3. QUANTITATIVE BENCHMARKS:
-       - 'wouldUsePercent' (Adoption Rate) should rarely exceed 60%.
-       - 'wouldPayPercent' (Paying Conversion) should rarely exceed 30%.
-       - Overall Score should reflect a realistic, often mediocre, market reception.
-
-    4. AGENT BUDGET:
-       - Each agent has a mental budget of ₹1000 for this category.
-
-    You MUST return an object with the following structure:
-    {
-      "overallAnalysis": {
-        "overallScore": 0-100,
-        "wouldUsePercent": 0-100,
-        "wouldPayPercent": 0-100,
-        "topAudience": "description",
-        "summary": "comprehensive executive summary highlighting both potential and significant friction points"
-      },
-      "agents": [
-        {
-          "name": "string",
-          "role": "string",
-          "personality": "string",
-          "goal": "string",
-          "problem": "string",
-          "score": 0-100,
-          "wouldUse": boolean,
-          "wouldPay": boolean,
-          "priceWilling": "string",
-          "timeToAdopt": "string",
-          "reason": "short explanation of decision",
-          "feedback": "detailed, potentially harsh advice for the founder"
-        }
-      ] (Exactly 10 items)
-    }`;
-
-    const response = await callLLM(prompt);
-    
-    if (!response.agents) {
-      response.agents = [];
+    if (input.mode === 'brutal_feedback') {
+      const systemPrompt = `You are MR.Agents simulation engine. Purpose: Human-like brutal feedback (Reddit style).
+      Group 1: Brutal Critics (3 agents). Group 2: "Already Exists" (4 agents). Group 3: Supporters (3 agents).
+      Return JSON: { "mode": "brutal_feedback", "summary": "...", "agents": [ { "name": "...", "type": "brutal | skeptic | supporter", "comment": "..." } ] } (10 agents total).
+      No scores. No percentages. Just raw human-style comments.`;
+      
+      return await callLLM(`Give feedback on: "${input.productIdea}"`, systemPrompt);
     }
 
-    return SimulateProductEvaluationOutputSchema.parse(response);
+    if (input.mode === 'first_paying_users') {
+      const systemPrompt = `You are MR.Agents simulation engine. Purpose: Simulate first user/investor conversation.
+      Agents: 5 VC mindset (skeptical, brutal) then 5 Advisor style (friendly, mentors).
+      Rule: Take turns. One message at a time. Do not repeat questions. Reference history.
+      Return JSON: { "agent": "...", "message": "...", "waiting_for_user": true }`;
+
+      const historyStr = input.history?.map(h => `${h.role === 'user' ? 'Founder' : h.agent}: ${h.message}`).join('\n') || '';
+      const prompt = `Product Idea: "${input.productIdea}"\n\nConversation History:\n${historyStr}\n\nGenerate the NEXT message in the conversation. Use one of the 10 personas. Be specific.`;
+      
+      return await callLLM(prompt, systemPrompt);
+    }
+
+    throw new Error("Invalid mode");
   }
 );

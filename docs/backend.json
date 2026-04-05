@@ -1,155 +1,56 @@
+
 {
   "entities": {
     "Simulation": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Simulation",
       "type": "object",
-      "description": "Represents a single market simulation run for a product idea, including user input, overall results, and references to individual agent evaluations.",
+      "description": "Represents a single market simulation run, supporting multiple evaluation modes.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Simulation entity."
-        },
-        "input": {
-          "type": "string",
-          "description": "The product idea, SaaS description, or link provided by the user for simulation."
-        },
-        "evaluationType": {
-          "type": "string",
-          "description": "The type of market evaluation selected by the user (e.g., Product Feedback, Market Fit, First Paying Users)."
-        },
-        "overallScore": {
-          "type": "number",
-          "description": "The aggregate score reflecting the overall market sentiment towards the product (0-100)."
-        },
-        "wouldUsePercent": {
-          "type": "number",
-          "description": "The percentage of simulated agents who indicated they would use the product."
-        },
-        "wouldPayPercent": {
-          "type": "number",
-          "description": "The percentage of simulated agents who indicated they would be willing to pay for the product."
-        },
-        "topAudience": {
-          "type": "string",
-          "description": "A summary identifying the most receptive target audience segment based on simulation results."
-        },
-        "summary": {
-          "type": "string",
-          "description": "A concise overall summary of the simulation results and market analysis."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the simulation was created or run.",
-          "format": "date-time"
-        },
-        "agentResultIds": {
+        "id": { "type": "string" },
+        "input": { "type": "string" },
+        "mode": { "type": "string", "enum": ["market_analysis", "brutal_feedback", "first_paying_users"] },
+        "overallScore": { "type": "number" },
+        "wouldUsePercent": { "type": "number" },
+        "wouldPayPercent": { "type": "number" },
+        "topAudience": { "type": "string" },
+        "summary": { "type": "string" },
+        "conversation": {
           "type": "array",
-          "description": "References to the AgentSimulationResult entities associated with this simulation. (Relationship: Simulation 1:N AgentSimulationResult)",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "agent": { "type": "string" },
+              "message": { "type": "string" },
+              "role": { "type": "string", "enum": ["agent", "user"] }
+            }
           }
-        }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "agentResultIds": { "type": "array", "items": { "type": "string" } }
       },
-      "required": [
-        "id",
-        "input",
-        "evaluationType",
-        "overallScore",
-        "wouldUsePercent",
-        "wouldPayPercent",
-        "topAudience",
-        "summary",
-        "createdAt",
-        "agentResultIds"
-      ]
+      "required": ["id", "input", "mode", "createdAt"]
     },
     "AgentSimulationResult": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "AgentSimulationResult",
       "type": "object",
-      "description": "Represents the detailed profile and evaluation outcome of a single AI agent within a specific market simulation.",
+      "description": "Individual agent feedback for analysis and brutal modes.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AgentSimulationResult entity."
-        },
-        "simulationId": {
-          "type": "string",
-          "description": "Reference to the Simulation entity this agent result belongs to. (Relationship: Simulation 1:N AgentSimulationResult)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the AI agent."
-        },
-        "role": {
-          "type": "string",
-          "description": "The professional role or persona assigned to the AI agent."
-        },
-        "personality": {
-          "type": "string",
-          "description": "A description of the AI agent's personality traits."
-        },
-        "goal": {
-          "type": "string",
-          "description": "The primary goal or objective of the AI agent that influences their product evaluation."
-        },
-        "problem": {
-          "type": "string",
-          "description": "A specific problem or challenge the AI agent faces that the product might address."
-        },
-        "score": {
-          "type": "number",
-          "description": "The individual score given by the AI agent for the product (0-100)."
-        },
-        "wouldUse": {
-          "type": "boolean",
-          "description": "Indicates whether the AI agent would use the product (true/false)."
-        },
-        "wouldPay": {
-          "type": "boolean",
-          "description": "Indicates whether the AI agent would be willing to pay for the product (true/false)."
-        },
-        "priceWilling": {
-          "type": "string",
-          "description": "The price the AI agent would be willing to pay, if any. Can be a specific amount or a qualitative statement."
-        },
-        "timeToAdopt": {
-          "type": "string",
-          "description": "The estimated time or readiness for the AI agent to adopt the product. Can be immediate, short-term, long-term, or never."
-        },
-        "reason": {
-          "type": "string",
-          "description": "The primary reason or justification for the AI agent's decision regarding the product."
-        },
-        "feedback": {
-          "type": "string",
-          "description": "Detailed feedback provided by the AI agent about the product."
-        }
-      },
-      "required": [
-        "id",
-        "simulationId",
-        "name",
-        "role",
-        "personality",
-        "goal",
-        "problem",
-        "score",
-        "wouldUse",
-        "wouldPay",
-        "priceWilling",
-        "timeToAdopt",
-        "reason",
-        "feedback"
-      ]
+        "id": { "type": "string" },
+        "simulationId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "comment": { "type": "string" },
+        "score": { "type": "number" },
+        "wouldUse": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "feedback": { "type": "string" }
+      }
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -157,47 +58,18 @@
         "path": "/users/{userId}/simulations/{simulationId}",
         "definition": {
           "entityName": "Simulation",
-          "schema": {
-            "$ref": "#/backend/entities/Simulation"
-          },
-          "description": "Stores individual market simulation runs. Each simulation is owned by a specific user, identified by the 'userId' in the path, which corresponds to the authenticated user's UID. Includes references to its associated AgentSimulationResult documents.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this simulation, corresponding to Firebase Authentication's UID."
-            },
-            {
-              "name": "simulationId",
-              "description": "The unique identifier for a specific market simulation."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Simulation" },
+          "description": "Stores simulation runs with mode-specific data."
         }
       },
       {
         "path": "/users/{userId}/simulations/{simulationId}/agentResults/{agentResultId}",
         "definition": {
           "entityName": "AgentSimulationResult",
-          "schema": {
-            "$ref": "#/backend/entities/AgentSimulationResult"
-          },
-          "description": "Stores the detailed evaluation results of a single AI agent for a specific market simulation. This subcollection inherits its authorization from the parent Simulation, ensuring that only the owning user can access these results. The 'simulationId' field within the document also links it explicitly to its parent simulation.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns the parent simulation."
-            },
-            {
-              "name": "simulationId",
-              "description": "The unique identifier of the parent simulation to which this agent result belongs."
-            },
-            {
-              "name": "agentResultId",
-              "description": "The unique identifier for a specific agent's simulation result."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/AgentSimulationResult" },
+          "description": "Detailed agent feedback."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to adhere strictly to the core design principles, especially Authorization Independence and Query-Aware Security Rules (QAPs), ensuring security, scalability, and debuggability for the 'AI Market Simulator' application. The primary strategy revolves around establishing a clear, user-owned hierarchy.\n\n**Authorization Independence (CRITICAL) & QAPs Support:**\n1.  **User-Owned Data:** All simulations are private to the user who initiates them. This is enforced by placing simulations under a user-specific path: `/users/{userId}/simulations/{simulationId}`. The `userId` in the path directly corresponds to `request.auth.uid`. This design eliminates the need for `get()` calls in security rules to check ownership, as the `userId` is part of the document's inherent path. A security rule like `allow read, write: if request.auth.uid == userId;` is atomic, highly performant, and simple to debug.\n2.  **Subcollection for Agent Results:** Each `Simulation` has multiple `AgentSimulationResult` entities. By storing these as a subcollection `/users/{userId}/simulations/{simulationId}/agentResults/{agentResultId}`, the agent results automatically inherit the authorization context of their parent simulation. Access to an `AgentSimulationResult` document is implicitly tied to the `userId` and `simulationId` in its path, without needing additional `ownerId` fields within the `AgentSimulationResult` document itself (though `simulationId` can remain for data integrity and cross-referencing). This also means rules for agent results remain simple: `allow read: if request.auth.uid == userId;`. The hierarchical path ensures QAPs are met because any client-side `list` query for simulations or agent results must specify the authenticated user's `userId`, preventing unauthorized access or accidental exposure of data.\n\n**Structural Segregation & Data Clarity:**\n*   All documents within `/users/{userId}/simulations` share the same security posture (owned by `userId`).\n*   All documents within `/users/{userId}/simulations/{simulationId}/agentResults` share the same security posture (belonging to `userId` and `simulationId`). There is no mixing of public/private or different access levels within these collections, simplifying rules and client-side logic.\n*   Standardized naming conventions (`userId`, `simulationId`, `agentResultId`) enhance predictability and debuggability.\n*   The `agentResultIds` array in the `Simulation` entity acts as a denormalized list of child references. This is useful for quickly fetching all child IDs without querying the subcollection, but for authorization, the path-based ownership remains the primary mechanism."
+    ]
   }
 }

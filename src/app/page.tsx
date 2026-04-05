@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -6,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { runSimulation } from '@/app/actions/simulation';
 import { MarketResults } from '@/components/market-results';
-import { Loader2, Rocket, Info, LayoutDashboard } from 'lucide-react';
+import { BrutalResults } from '@/components/brutal-results';
+import { ChatInterface } from '@/components/chat-interface';
+import { Loader2, Rocket, Info, LayoutDashboard, Brain, MessageSquare, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { SimulateProductEvaluationOutput } from '@/ai/flows/simulate-product-evaluation';
 import { useFirestore, useUser, useAuth } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -16,9 +18,9 @@ import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 export default function HomePage() {
   const [productIdea, setProductIdea] = useState('');
-  const [evaluationType, setEvaluationType] = useState<'Product Feedback' | 'Market Fit' | 'First Paying Users'>('Product Feedback');
+  const [mode, setMode] = useState<'market_analysis' | 'brutal_feedback' | 'first_paying_users'>('market_analysis');
   const [isLoading, setIsLoading] = useState(false);
-  const [results, setResults] = useState<SimulateProductEvaluationOutput | null>(null);
+  const [results, setResults] = useState<any | null>(null);
   
   const { toast } = useToast();
   const { firestore } = useFirestore();
@@ -31,60 +33,9 @@ export default function HomePage() {
     }
   }, [user, isUserLoading, auth]);
 
-  const saveSimulationResults = useCallback((data: SimulateProductEvaluationOutput, idea: string, type: string) => {
-    if (!user || !firestore) return;
-
-    // Create a reference for the new simulation to get a unique ID
-    const simulationsColRef = collection(firestore, 'users', user.uid, 'simulations');
-    const simRef = doc(simulationsColRef);
-    const simId = simRef.id;
-
-    const agentResultIds = data.agents.map(() => doc(collection(firestore, 'id_gen')).id);
-
-    const simulationData = {
-      id: simId,
-      input: idea,
-      evaluationType: type,
-      overallScore: data.overallAnalysis.overallScore,
-      wouldUsePercent: data.overallAnalysis.wouldUsePercent,
-      wouldPayPercent: data.overallAnalysis.wouldPayPercent,
-      topAudience: data.overallAnalysis.topAudience,
-      summary: data.overallAnalysis.summary,
-      createdAt: new Date().toISOString(),
-      agentResultIds: agentResultIds
-    };
-
-    // Save the simulation metadata (Non-blocking as per guidelines)
-    setDocumentNonBlocking(simRef, simulationData, { merge: true });
-
-    // Save each individual agent evaluation
-    data.agents.forEach((agent, index) => {
-      const agentId = agentResultIds[index];
-      const agentRef = doc(firestore, 'users', user.uid, 'simulations', simId, 'agentResults', agentId);
-      setDocumentNonBlocking(agentRef, {
-        ...agent,
-        id: agentId,
-        simulationId: simId
-      }, { merge: true });
-    });
-  }, [user, firestore]);
-
   const handleRunSimulation = async () => {
     if (!productIdea.trim()) {
-      toast({
-        title: "Input required",
-        description: "Please enter your product idea or SaaS concept first.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!user) {
-      toast({
-        title: "Authenticating",
-        description: "Please wait while we set up your session.",
-        variant: "destructive"
-      });
+      toast({ title: "Input required", description: "Please enter your product idea first.", variant: "destructive" });
       return;
     }
 
@@ -92,28 +43,25 @@ export default function HomePage() {
     setResults(null);
     
     try {
-      const response = await runSimulation({ productIdea, evaluationType });
+      const response = await runSimulation({ productIdea, mode });
       if (response.success && response.data) {
-        console.log("Simulation result:", response.data);
         setResults(response.data);
         
-        // Persist results to Firestore
-        saveSimulationResults(response.data, productIdea, evaluationType);
-
-        toast({
-          title: "Simulation Complete",
-          description: "10 AI agents have realistically evaluated your product.",
-        });
+        if (firestore && user && mode !== 'first_paying_users') {
+          const simRef = doc(collection(firestore, 'users', user.uid, 'simulations'));
+          setDocumentNonBlocking(simRef, {
+            id: simRef.id,
+            input: productIdea,
+            mode,
+            ...response.data,
+            createdAt: new Date().toISOString()
+          }, { merge: true });
+        }
       } else {
         throw new Error(response.error);
       }
     } catch (error: any) {
-      console.error("Simulation error:", error);
-      toast({
-        title: "Simulation Error",
-        description: error.message || "Something went wrong while running the simulation.",
-        variant: "destructive"
-      });
+      toast({ title: "Simulation Error", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -124,13 +72,13 @@ export default function HomePage() {
       <header className="text-center space-y-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-4">
           <Rocket className="w-4 h-4" />
-          MR.Agents: Brutally Honest Market Testing
+          MR.Agents: Multi-Engine Validation
         </div>
         <h1 className="text-5xl md:text-6xl font-headline font-bold text-white tracking-tight">
           AI Market <span className="text-accent">Simulator</span>
         </h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-body">
-          Validate your idea against 10 AI personas. This engine is designed to find flaws, not just flatter you.
+          Choose your engine. Validate your idea with deep analysis, brutal honesty, or interactive pressure.
         </p>
       </header>
 
@@ -140,84 +88,77 @@ export default function HomePage() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Info className="w-4 h-4" />
-                Product Idea or Link
+                Product Concept
               </label>
               <Textarea 
-                placeholder="Paste your product idea, SaaS description, or project link here..."
-                className="min-h-[200px] bg-background border-white/10 focus:ring-accent"
+                placeholder="Describe your idea or paste a link..."
+                className="min-h-[150px] bg-background border-white/10"
                 value={productIdea}
                 onChange={(e) => setProductIdea(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Evaluation Focus</label>
-              <Select value={evaluationType} onValueChange={(value: any) => setEvaluationType(value)}>
-                <SelectTrigger className="bg-background border-white/10">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Product Feedback">Product Feedback</SelectItem>
-                  <SelectItem value="Market Fit">Market Fit</SelectItem>
-                  <SelectItem value="First Paying Users">First Paying Users</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium text-muted-foreground">Simulation Engine</label>
+              <div className="grid grid-cols-1 gap-2">
+                <Button 
+                  variant={mode === 'market_analysis' ? 'default' : 'outline'}
+                  className="justify-start gap-2"
+                  onClick={() => setMode('market_analysis')}
+                >
+                  <Brain className="w-4 h-4" /> Market Analysis
+                </Button>
+                <Button 
+                  variant={mode === 'brutal_feedback' ? 'default' : 'outline'}
+                  className="justify-start gap-2 text-red-400 border-red-900/20"
+                  onClick={() => setMode('brutal_feedback')}
+                >
+                  <AlertTriangle className="w-4 h-4" /> Brutal Feedback
+                </Button>
+                <Button 
+                  variant={mode === 'first_paying_users' ? 'default' : 'outline'}
+                  className="justify-start gap-2 text-cyan-400 border-cyan-900/20"
+                  onClick={() => setMode('first_paying_users')}
+                >
+                  <MessageSquare className="w-4 h-4" /> Paying Users Chat
+                </Button>
+              </div>
             </div>
 
             <Button 
-              className="w-full h-12 text-lg font-headline font-bold bg-primary hover:bg-primary/90 text-white shadow-lg transition-all active:scale-95"
+              className="w-full h-12 text-lg font-headline font-bold"
               onClick={handleRunSimulation}
-              disabled={isLoading || isUserLoading}
+              disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Running Critical Simulation...
-                </>
-              ) : (
-                'Run Simulation'
-              )}
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Start Simulation'}
             </Button>
-          </div>
-          
-          <div className="p-4 rounded-xl bg-accent/5 border border-accent/10">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-accent mb-2">Realism Engine Active</h4>
-            <ul className="text-xs text-muted-foreground space-y-2 list-disc pl-4">
-              <li>2 Buyers | 4 Interested | 4 Rejectors</li>
-              <li>Calculated disagreement between agents</li>
-              <li>Strict pricing and niche validation</li>
-              <li>Fixed ₹1000 budget logic</li>
-            </ul>
           </div>
         </aside>
 
         <main className="lg:col-span-8">
           {results ? (
-            <MarketResults results={results} />
+            <>
+              {mode === 'market_analysis' && <MarketResults results={results} />}
+              {mode === 'brutal_feedback' && <BrutalResults results={results} />}
+              {mode === 'first_paying_users' && <ChatInterface productIdea={productIdea} initialMessage={results} />}
+            </>
           ) : (
             <div className="h-[500px] flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-2xl bg-card/10 text-muted-foreground space-y-4">
               {isLoading ? (
                 <div className="text-center space-y-4">
                   <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
-                  <div className="space-y-2">
-                    <p className="text-xl font-headline font-medium text-white">Generating 10 Real-world Personas...</p>
-                    <p className="text-sm">Bracing for feedback...</p>
-                  </div>
+                  <p className="text-xl font-headline font-medium text-white">Initializing Engine...</p>
                 </div>
               ) : (
                 <>
                   <LayoutDashboard className="w-16 h-16 opacity-20" />
-                  <p className="text-lg font-medium text-center px-6">Results will appear here. Warning: 80% of agents may reject your idea if the value prop is weak.</p>
+                  <p className="text-lg font-medium text-center px-6">Select an engine and run simulation.</p>
                 </>
               )}
             </div>
           )}
         </main>
       </div>
-
-      <footer className="pt-12 border-t border-white/5 text-center text-sm text-muted-foreground">
-        <p>© {new Date().getFullYear()} MR.Agents Simulator. Validating markets with brutal honesty.</p>
-      </footer>
     </div>
   );
 }
