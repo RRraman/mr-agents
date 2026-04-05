@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Main simulation flow supporting 3 distinct modes.
@@ -32,7 +31,13 @@ const simulateProductEvaluationFlow = ai.defineFlow(
     if (input.mode === 'market_analysis') {
       const systemPrompt = `You are MR.Agents simulation engine. Purpose: Realistic market validation. 
       Distribution: 2 buyers, 3 interested, 2 free users, 3 rejectors. Tone: Analytical, Startup research.
-      Return JSON with: overallScore (0-100), wouldUsePercent (0-100), wouldPayPercent (0-100), topAudience, summary, agents (array of 10 items with name, role, score, reason, feedback).`;
+      Return JSON with: 
+      - overallScore (0-100)
+      - wouldUsePercent (0-100)
+      - wouldPayPercent (0-100)
+      - topAudience (string)
+      - summary (string)
+      - agents (array of 10 objects each with: name, role, personality, goal, problem, score, wouldUse (boolean), wouldPay (boolean), priceWilling (string), reason, feedback)`;
       
       return await callLLM(`Evaluate: "${input.productIdea}"`, systemPrompt);
     } 

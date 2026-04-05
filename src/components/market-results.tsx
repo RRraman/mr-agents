@@ -2,14 +2,20 @@ import { AgentCard } from "@/components/agent-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Users, CreditCard, Sparkles, TrendingUp, Info } from "lucide-react";
-import { SimulateProductEvaluationOutput } from "@/ai/flows/simulate-product-evaluation";
 
 interface MarketResultsProps {
-  results: SimulateProductEvaluationOutput;
+  results: {
+    overallScore: number;
+    wouldUsePercent: number;
+    wouldPayPercent: number;
+    topAudience: string;
+    summary: string;
+    agents: Array<any>;
+  };
 }
 
 export function MarketResults({ results }: MarketResultsProps) {
-  const { overallAnalysis, agents } = results;
+  const { overallScore, wouldUsePercent, wouldPayPercent, topAudience, summary, agents } = results;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -20,8 +26,8 @@ export function MarketResults({ results }: MarketResultsProps) {
             <Sparkles className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold font-headline text-primary">{Math.round(overallAnalysis.overallScore)}%</div>
-            <Progress value={overallAnalysis.overallScore} className="h-2 mt-4 bg-primary/20" />
+            <div className="text-4xl font-bold font-headline text-primary">{Math.round(overallScore || 0)}%</div>
+            <Progress value={overallScore || 0} className="h-2 mt-4 bg-primary/20" />
           </CardContent>
         </Card>
 
@@ -31,7 +37,7 @@ export function MarketResults({ results }: MarketResultsProps) {
             <Users className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold font-headline text-green-500">{overallAnalysis.wouldUsePercent}%</div>
+            <div className="text-4xl font-bold font-headline text-green-500">{wouldUsePercent || 0}%</div>
             <p className="text-xs text-muted-foreground mt-2">Likely users</p>
           </CardContent>
         </Card>
@@ -42,8 +48,8 @@ export function MarketResults({ results }: MarketResultsProps) {
             <CreditCard className="h-4 w-4 text-cyan-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold font-headline text-cyan-500">{overallAnalysis.wouldPayPercent}%</div>
-            <p className="text-xs text-muted-foreground mt-2">Willing to pay ₹1000</p>
+            <div className="text-4xl font-bold font-headline text-cyan-500">{wouldPayPercent || 0}%</div>
+            <p className="text-xs text-muted-foreground mt-2">Willing to pay</p>
           </CardContent>
         </Card>
       </div>
@@ -57,7 +63,7 @@ export function MarketResults({ results }: MarketResultsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-foreground/90">{overallAnalysis.topAudience}</p>
+            <p className="text-foreground/90">{topAudience}</p>
           </CardContent>
         </Card>
 
@@ -69,7 +75,7 @@ export function MarketResults({ results }: MarketResultsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-foreground/80 leading-relaxed">{overallAnalysis.summary}</p>
+            <p className="text-sm text-foreground/80 leading-relaxed">{summary}</p>
           </CardContent>
         </Card>
       </div>
@@ -80,7 +86,7 @@ export function MarketResults({ results }: MarketResultsProps) {
           Market Agents (10 Simulation Profiles)
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map((agent, index) => (
+          {agents?.map((agent, index) => (
             <AgentCard key={index} agent={agent} />
           ))}
         </div>
