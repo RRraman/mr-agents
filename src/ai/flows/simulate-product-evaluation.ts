@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Main simulation flow supporting 3 distinct modes with signal-based dynamic scoring.
+ * @fileOverview Main simulation flow supporting 3 distinct modes with signal-based dynamic scoring and detail inference.
  */
 
 import { ai } from '@/ai/genkit';
@@ -31,8 +31,18 @@ const simulateProductEvaluationFlow = ai.defineFlow(
     if (input.mode === 'market_analysis') {
       const systemPrompt = `You are MR.Agents simulation engine. 
       
-      CRITICAL RULE: Every aggregate metric MUST be calculated directly from the individual decisions of 10 agents. Do NOT use hardcoded or fixed scores.
-      
+      CRITICAL RULE: Every aggregate metric MUST be calculated directly from the individual decisions of 10 agents. Do NOT use hardcoded or fixed scores. Do NOT normalize or force results into specific ranges. Let scores vary naturally based on logic.
+
+      STEP 0: INFERENCE & ASSUMPTIONS FOR MISSING DETAILS
+      If the product concept is short or lacks detail, agents MUST infer realistic assumptions before applying scoring:
+      - Missing target users: Assume a broad, generic audience.
+      - Missing pricing: Assume moderate willingness to pay but poor justification.
+      - Missing differentiation: Assume a crowded market with existing solutions.
+      - Missing urgency: Assume low urgency (a "nice-to-have" product).
+      - Missing ROI/savings: Assume unclear value and weak financial impact.
+      - Missing niche: Assume a generic AI tool.
+      Detailed inputs provided by the user MUST always override these assumptions. Direct scoring applies where details exist.
+
       STEP 1: Generate 10 diverse and realistic personas.
       
       STEP 2: AGENT EVALUATION LOGIC (Apply per agent):
@@ -40,7 +50,7 @@ const simulateProductEvaluationFlow = ai.defineFlow(
       - adoption_probability = 50%
       - pay_probability = 20%
 
-      Evaluate these SIGNALS for the product idea:
+      Evaluate these SIGNALS for the product idea (including inferred assumptions where details are missing):
       
       POSITIVE BOOSTS:
       - Clear ROI (makes/saves money): +15 adoption, +20 pay
@@ -76,10 +86,10 @@ const simulateProductEvaluationFlow = ai.defineFlow(
       Return ONLY valid JSON:
       {
         "overallScore": number,
-        "wouldUsePercent": number (this is adoptionRate),
-        "wouldPayPercent": number (this is payingRate),
+        "wouldUsePercent": number,
+        "wouldPayPercent": number,
         "topAudience": "string",
-        "summary": "Executive analysis based on found signals",
+        "summary": "Executive analysis based on found signals and inferences",
         "agents": [
           {
             "name": "string",
@@ -88,11 +98,11 @@ const simulateProductEvaluationFlow = ai.defineFlow(
             "goal": "string",
             "positivesFound": ["list of detected positive signals"],
             "negativesFound": ["list of detected negative signals"],
-            "score": number (this is confidenceScore),
+            "score": number,
             "wouldUse": boolean,
             "wouldPay": boolean,
             "priceWilling": "string",
-            "reason": "Detailed reasoning explaining the probability shift from signals",
+            "reason": "Detailed reasoning explaining the probability shift from signals or inferences",
             "feedback": "Direct advice"
           }
         ]
