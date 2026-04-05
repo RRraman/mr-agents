@@ -44,7 +44,7 @@ const generateMarketSummaryAndTopAudienceFlow = ai.defineFlow(
     4. topAudience (concise description)
     5. summary (comprehensive insights)`;
 
-    const response = await callLLM(prompt);
-    return GenerateMarketSummaryOutputSchema.parse(JSON.parse(response));
+    const data = await callLLM(prompt);
+    return GenerateMarketSummaryOutputSchema.parse(data);
   }
 );

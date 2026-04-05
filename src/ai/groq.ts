@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Groq LLM integration utility.
+ * @fileOverview Groq LLM integration utility with robust JSON parsing.
  */
 
 export async function callLLM(prompt: string) {
@@ -21,7 +21,12 @@ export async function callLLM(prompt: string) {
       messages: [
         {
           role: 'system',
-          content: 'You are part of a multi-agent market simulation system. Respond as the assigned agent only. Always respond with valid JSON.',
+          content: `You are MR.Agents simulation engine.
+Return ONLY valid JSON.
+No markdown.
+No explanation.
+No text before or after JSON.
+Always respond with a structured JSON object as requested.`,
         },
         {
           role: 'user',
@@ -29,7 +34,7 @@ export async function callLLM(prompt: string) {
         },
       ],
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: 3000, // Increased for full simulation output
       response_format: { type: 'json_object' }
     }),
   });
@@ -40,5 +45,20 @@ export async function callLLM(prompt: string) {
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const text = data.choices[0].message.content;
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("JSON parse failed, attempting extraction:", text);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (innerError) {
+        console.error("Fallback extraction failed:", innerError);
+      }
+    }
+    throw new Error("Invalid AI JSON response");
+  }
 }

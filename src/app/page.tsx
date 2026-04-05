@@ -33,6 +33,7 @@ export default function HomePage() {
     try {
       const response = await runSimulation({ productIdea, evaluationType });
       if (response.success && response.data) {
+        console.log("Simulation result:", response.data);
         setResults(response.data);
         toast({
           title: "Simulation Complete",
@@ -42,6 +43,7 @@ export default function HomePage() {
         throw new Error(response.error);
       }
     } catch (error: any) {
+      console.error("Simulation error:", error);
       toast({
         title: "Simulation Error",
         description: error.message || "Something went wrong while running the simulation.",
@@ -135,8 +137,8 @@ export default function HomePage() {
                 <div className="text-center space-y-4">
                   <Loader2 className="w-12 h-12 animate-spin mx-auto text-primary" />
                   <div className="space-y-2">
-                    <p className="text-xl font-headline font-medium text-white">Generating 10 AI Customer Profiles...</p>
-                    <p className="text-sm">Persona evaluation in progress...</p>
+                    <p className="text-xl font-headline font-medium text-white">Simulating Market Response...</p>
+                    <p className="text-sm">Agents are evaluating your product...</p>
                   </div>
                 </div>
               ) : (

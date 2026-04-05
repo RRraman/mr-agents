@@ -1,20 +1,12 @@
 'use server';
 /**
  * @fileOverview This file defines the Genkit flow for simulating product evaluations using Groq AI.
+ * It uses a single-shot prompt to generate the entire market simulation for better reliability.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { callLLM } from '@/ai/groq';
-
-const AgentProfileSchema = z.object({
-  name: z.string(),
-  role: z.string(),
-  personality: z.string(),
-  problem: z.string(),
-  goal: z.string(),
-  budget: z.number().int(),
-});
 
 const AgentEvaluationOutputSchema = z.object({
   name: z.string(),
@@ -62,57 +54,51 @@ const simulateProductEvaluationFlow = ai.defineFlow(
     outputSchema: SimulateProductEvaluationOutputSchema,
   },
   async (input) => {
-    // Step 1: Generate 10 AI agents
-    const generateAgentsPrompt = `You are an expert market researcher. Create 10 distinct and realistic user personas to evaluate a product idea.
-    Evaluation type: "${input.evaluationType}".
-    Product Idea: "${input.productIdea}"
+    const prompt = `Act as an expert market research engine. Conduct a simulation for the following product idea:
     
-    Each user should have a unique name, professional role, personality, specific problem, and goal. Each agent has a fixed budget of ₹1000.
-    Return a JSON object with an 'agents' key containing the array of 10 agent profiles.`;
+    PRODUCT IDEA: "${input.productIdea}"
+    EVALUATION FOCUS: "${input.evaluationType}"
+    
+    Your task is to:
+    1. Generate 10 diverse AI personas (agents) representing distinct market segments.
+    2. Each agent must evaluate the product based on their unique personality, role, goals, and problems.
+    3. Each agent has a mental budget of ₹1000.
+    4. Provide an overall market analysis based on all evaluations.
+    
+    You MUST return an object with the following structure:
+    {
+      "overallAnalysis": {
+        "overallScore": 0-100,
+        "wouldUsePercent": 0-100,
+        "wouldPayPercent": 0-100,
+        "topAudience": "description",
+        "summary": "comprehensive executive summary"
+      },
+      "agents": [
+        {
+          "name": "string",
+          "role": "string",
+          "personality": "string",
+          "goal": "string",
+          "problem": "string",
+          "score": 0-100,
+          "wouldUse": boolean,
+          "wouldPay": boolean,
+          "priceWilling": "string",
+          "timeToAdopt": "string",
+          "reason": "short explanation of decision",
+          "feedback": "detailed advice for the founder"
+        }
+      ] (10 items)
+    }`;
 
-    const agentsResponse = await callLLM(generateAgentsPrompt);
-    const agentsData = JSON.parse(agentsResponse);
-    const agentProfiles = z.array(AgentProfileSchema).parse(agentsData.agents || agentsData);
-
-    // Step 2: Each agent evaluates the product
-    const agentEvaluations: any[] = [];
-    for (const agentProfile of agentProfiles) {
-      const evaluateAgentPrompt = `You are ${agentProfile.name}, a ${agentProfile.role}. 
-      Personality: "${agentProfile.personality}". Problem: "${agentProfile.problem}". Goal: "${agentProfile.goal}".
-      Budget: ₹${agentProfile.budget}.
-
-      Evaluate this product idea ("${input.evaluationType}" assessment):
-      "${input.productIdea}"
-
-      Return a JSON object with: score (0-100), wouldUse (bool), wouldPay (bool), priceWilling (string), timeToAdopt (string), reason (string), feedback (string).
-      Include your profile details (name, role, etc.) in the response as well.`;
-
-      const evaluationResponse = await callLLM(evaluateAgentPrompt);
-      const evaluation = JSON.parse(evaluationResponse);
-      
-      agentEvaluations.push(AgentEvaluationOutputSchema.parse({
-        ...agentProfile,
-        ...evaluation
-      }));
+    const response = await callLLM(prompt);
+    
+    // Ensure agents array always exists for UI safety
+    if (!response.agents) {
+      response.agents = [];
     }
 
-    // Step 3: Calculate overall market analysis
-    const analysisPrompt = `Based on these AI agent evaluations for "${input.productIdea}", provide an overall market analysis.
-    Evaluations: ${JSON.stringify(agentEvaluations)}
-    
-    Return a JSON object with: 
-    - overallScore (avg score)
-    - wouldUsePercent (% of wouldUse)
-    - wouldPayPercent (% of wouldPay)
-    - topAudience (string description)
-    - summary (concise insights)`;
-
-    const analysisResponse = await callLLM(analysisPrompt);
-    const overallAnalysis = OverallMarketAnalysisSchema.parse(JSON.parse(analysisResponse));
-
-    return {
-      agents: agentEvaluations,
-      overallAnalysis: overallAnalysis,
-    };
+    return SimulateProductEvaluationOutputSchema.parse(response);
   }
 );

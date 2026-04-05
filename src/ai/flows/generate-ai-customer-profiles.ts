@@ -41,8 +41,7 @@ const generateAiCustomerProfilesFlow = ai.defineFlow(
     Each profile needs: name, role, personality, problem, goal, budget (in Rupees).
     Return a JSON array of 10 objects.`;
 
-    const response = await callLLM(prompt);
-    const data = JSON.parse(response);
+    const data = await callLLM(prompt);
     const profiles = Array.isArray(data) ? data : (data.profiles || data.agents);
     return GenerateAiCustomerProfilesOutputSchema.parse(profiles);
   }
