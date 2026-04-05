@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +31,44 @@ export default function HomePage() {
     }
   }, [user, isUserLoading, auth]);
 
+  const saveSimulationResults = useCallback((data: SimulateProductEvaluationOutput, idea: string, type: string) => {
+    if (!user || !firestore) return;
+
+    // Create a reference for the new simulation to get a unique ID
+    const simulationsColRef = collection(firestore, 'users', user.uid, 'simulations');
+    const simRef = doc(simulationsColRef);
+    const simId = simRef.id;
+
+    const agentResultIds = data.agents.map(() => doc(collection(firestore, 'id_gen')).id);
+
+    const simulationData = {
+      id: simId,
+      input: idea,
+      evaluationType: type,
+      overallScore: data.overallAnalysis.overallScore,
+      wouldUsePercent: data.overallAnalysis.wouldUsePercent,
+      wouldPayPercent: data.overallAnalysis.wouldPayPercent,
+      topAudience: data.overallAnalysis.topAudience,
+      summary: data.overallAnalysis.summary,
+      createdAt: new Date().toISOString(),
+      agentResultIds: agentResultIds
+    };
+
+    // Save the simulation metadata (Non-blocking as per guidelines)
+    setDocumentNonBlocking(simRef, simulationData, { merge: true });
+
+    // Save each individual agent evaluation
+    data.agents.forEach((agent, index) => {
+      const agentId = agentResultIds[index];
+      const agentRef = doc(firestore, 'users', user.uid, 'simulations', simId, 'agentResults', agentId);
+      setDocumentNonBlocking(agentRef, {
+        ...agent,
+        id: agentId,
+        simulationId: simId
+      }, { merge: true });
+    });
+  }, [user, firestore]);
+
   const handleRunSimulation = async () => {
     if (!productIdea.trim()) {
       toast({
@@ -59,35 +97,8 @@ export default function HomePage() {
         console.log("Simulation result:", response.data);
         setResults(response.data);
         
-        const simId = doc(collection(firestore, 'temp')).id;
-        const simRef = doc(firestore, 'users', user.uid, 'simulations', simId);
-        
-        const agentResultIds = response.data.agents.map(() => doc(collection(firestore, 'temp')).id);
-
-        const simulationData = {
-          id: simId,
-          input: productIdea,
-          evaluationType: evaluationType,
-          overallScore: response.data.overallAnalysis.overallScore,
-          wouldUsePercent: response.data.overallAnalysis.wouldUsePercent,
-          wouldPayPercent: response.data.overallAnalysis.wouldPayPercent,
-          topAudience: response.data.overallAnalysis.topAudience,
-          summary: response.data.overallAnalysis.summary,
-          createdAt: new Date().toISOString(),
-          agentResultIds: agentResultIds
-        };
-
-        setDocumentNonBlocking(simRef, simulationData, { merge: true });
-
-        response.data.agents.forEach((agent, index) => {
-          const agentId = agentResultIds[index];
-          const agentRef = doc(firestore, 'users', user.uid, 'simulations', simId, 'agentResults', agentId);
-          setDocumentNonBlocking(agentRef, {
-            ...agent,
-            id: agentId,
-            simulationId: simId
-          }, { merge: true });
-        });
+        // Persist results to Firestore
+        saveSimulationResults(response.data, productIdea, evaluationType);
 
         toast({
           title: "Simulation Complete",
