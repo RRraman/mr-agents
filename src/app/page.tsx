@@ -104,11 +104,15 @@ export default function HomePage() {
           <Rocket className="w-4 h-4" />
           MR.Agents: Multi-Engine Validation
         </div>
+
+        {/* ✅ UPDATED TITLE */}
         <h1 className="text-5xl md:text-6xl font-headline font-bold text-white tracking-tight">
-          AI Market <span className="text-accent">Simulator</span>
+          Idea Analysis and Validation using <span className="text-accent">Agent Systems</span>
         </h1>
+
+        {/* ✅ UPDATED DESCRIPTION */}
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-body">
-          Choose your engine. Validate your idea with deep analysis, brutal honesty, or interactive pressure.
+          Analyze and validate product ideas using agent-based systems to evaluate feasibility and potential outcomes.
         </p>
       </header>
 
