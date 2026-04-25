@@ -4,8 +4,8 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'AI Market Simulator',
-  description: 'Simulate market response with AI agents evaluating your product idea.',
+  title: 'Idea Analysis and Validation using Agent Systems',
+  description: 'Analyze and validate product ideas using agent-based systems to evaluate feasibility and potential outcomes.',
 };
 
 export default function RootLayout({
